@@ -1,0 +1,18 @@
+development: &base
+  adapter: mysql2
+  encoding: utf8
+  reconnect: true
+  pool: 5
+  database: ci_dev
+  username: root
+  password: admin
+  collation: utf8_general_ci
+
+test:
+  <<: *base
+  database: ci_test
+  min_messages: WARNING
+
+production:
+  <<: *base
+  database: ci_production

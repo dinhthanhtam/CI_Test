@@ -1,0 +1,80 @@
+bundle_cache_key: &bundle_cache_key
+  bundle-{{ checksum "Gemfile.lock" }}
+
+version: 2
+
+jobs:
+  build:
+    docker:
+      - image: ruby:2.3.1
+        environment:
+          RAILS_ENV: test
+          DATABASE_URL: 'mysql2://root@127.0.0.1:3306/test'
+          CIRCLE_TEST_REPORTS: '/tmp/test-results'
+          TZ: Asia/Tokyo
+      - image: mysql:5.6
+        environment:
+          MYSQL_ALLOW_EMPTY_PASSWORD: yes
+          MYSQL_DATABASE: test
+        command: [--character-set-server=utf8, --collation-server=utf8_general_ci, --default-storage-engine=innodb]
+    parallelism: 4
+
+    working_directory: ~/workspace
+
+    steps:
+      - checkout
+      - run: apt-get update
+      - run: apt-get install -y fonts-ipafont-gothic fonts-ipafont-mincho
+      - run:
+          name: Install phatomjs
+          command: |
+            # phantomjsのDLが不安定なため、nexwayのS3にtarファイルを置いて公開している
+            wget https://s3-ap-northeast-1.amazonaws.com/rspec-storage/phantomjs-2.1.1-linux-x86_64.tar.bz2
+            tar jxfv phantomjs-2.1.1-linux-x86_64.tar.bz2
+            cp -pr phantomjs-2.1.1-linux-x86_64/bin/phantomjs /usr/bin/
+      - run:
+          name: Install rmagick dependencies
+          command: |
+            apt-get install libmagickwand-dev imagemagick imagemagick-6.q16 libmagickcore-dev
+            ln -s /usr/lib/x86_64-linux-gnu/ImageMagick-6.8.9/bin-Q16/Magick-config /usr/bin/Magick-config
+      - restore_cache:
+          key: *bundle_cache_key
+      - run: bundle install --jobs=4 --retry=3 --path vendor/bundle
+      - save_cache:
+          key: *bundle_cache_key
+          paths:
+            - vendor/bundle
+      - run: mkdir -p tmp stat ${CIRCLE_TEST_REPORTS}/rspec/
+      - run: mv config/database.yml.sample config/database.yml
+      - run: 
+          name: instal dockerize
+          command: |
+            DOCKERIZE_URL="https://circle-downloads.s3.amazonaws.com/circleci-images/cache/linux-amd64/dockerize-latest.tar.gz" \
+            && curl --silent --show-error --location --fail --retry 3 --output /tmp/dockerize-linux-amd64.tar.gz $DOCKERIZE_URL \
+            && tar -C /usr/local/bin -xzvf /tmp/dockerize-linux-amd64.tar.gz \
+            && rm -rf /tmp/dockerize-linux-amd64.tar.gz \
+            && dockerize --version
+      - run: dockerize -wait tcp://127.0.0.1:3306 -timeout 1m
+      - run: bundle exec rake db:migrate
+      - run:
+          name: UnitTest(only models)
+          command: |
+            TESTFILES=$(circleci tests glob "spec/models/**/*_spec.rb" | circleci tests split --split-by=timings)
+            echo $TESTFILES
+            bundle exec rspec spec/models --format RspecJunitFormatter --out /tmp/test-results/model/rspec.xml 
+          no_output_timeout: '60m'
+          when: always
+      - store_test_results:
+          path: /tmp/test-results
+      - store_artifacts:
+          path: /tmp/test-results
+          destination: test-results
+      - store_artifacts:
+          path: /home/circleci/workspace/tmp/capybara
+
+workflows:
+  version: 2
+
+  workflow:
+    jobs:
+      - build
