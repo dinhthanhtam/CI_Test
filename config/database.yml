@@ -7,7 +7,9 @@ development: &base
   username: root
   password: 12345678
   collation: utf8_general_ci
-    
+  variables:
+    sql_mode: :default
+
 test:
   <<: *base
   database: ci_test

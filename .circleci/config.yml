@@ -6,15 +6,17 @@ version: 2
 jobs:
   build:
     docker:
-      - image: ruby:2.3.1
+      - image: ruby:2.5.3
         environment:
           RAILS_ENV: test
           DATABASE_URL: 'mysql2://root@127.0.0.1:3306/test'
           CIRCLE_TEST_REPORTS: '/tmp/test-results'
           TZ: Asia/Tokyo
+
       - image: mysql:5.6
         environment:
           MYSQL_ALLOW_EMPTY_PASSWORD: yes
+          MYSQL_ROOT_PASSWORD: ''
           MYSQL_DATABASE: test
         command: [--character-set-server=utf8, --collation-server=utf8_general_ci, --default-storage-engine=innodb]
     parallelism: 4
@@ -35,8 +37,9 @@ jobs:
       - run:
           name: Install rmagick dependencies
           command: |
-            apt-get install libmagickwand-dev imagemagick imagemagick-6.q16 libmagickcore-dev
+            apt-get install graphicsmagick-libmagick-dev-compat imagemagick libmagickcore-dev libmagickwand-dev
             ln -s /usr/lib/x86_64-linux-gnu/ImageMagick-6.8.9/bin-Q16/Magick-config /usr/bin/Magick-config
+            gem install rmagick -v '2.13.2'
       - restore_cache:
           key: *bundle_cache_key
       - run: bundle install --jobs=4 --retry=3 --path vendor/bundle
@@ -62,14 +65,6 @@ jobs:
             bundle exec rspec spec/models 
           no_output_timeout: '60m'
           when: always
-      - store_test_results:
-          path: /tmp/test-results
-      - store_artifacts:
-          path: /tmp/test-results
-          destination: test-results
-      - store_artifacts:
-          path: /home/circleci/workspace/tmp/capybara
-
 workflows:
   version: 2
 
