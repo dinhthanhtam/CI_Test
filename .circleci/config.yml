@@ -59,9 +59,7 @@ jobs:
       - run:
           name: UnitTest(only models)
           command: |
-            TESTFILES=$(circleci tests glob "spec/models/**/*_spec.rb" | circleci tests split --split-by=timings)
-            echo $TESTFILES
-            bundle exec rspec spec/models --format RspecJunitFormatter --out /tmp/test-results/model/rspec.xml 
+            bundle exec rspec spec/models 
           no_output_timeout: '60m'
           when: always
       - store_test_results:
