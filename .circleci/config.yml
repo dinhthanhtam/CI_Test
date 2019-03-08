@@ -6,7 +6,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: ruby:2.5.3
+      - image: ruby:2.3.1
         environment:
           RAILS_ENV: test
           DATABASE_URL: 'mysql2://root@127.0.0.1:3306/test'
@@ -25,7 +25,10 @@ jobs:
 
     steps:
       - checkout
-      - run: apt-get update
+      - run: echo "deb [check-valid-until=no] http://cdn-fastly.deb.debian.org/debian jessie main" > /etc/apt/sources.list.d/jessie.list
+      - run: echo "deb [check-valid-until=no] http://archive.debian.org/debian jessie-backports main" > /etc/apt/sources.list.d/jessie-backports.list
+      - run: sed -i '/deb http:\/\/deb.debian.org\/debian jessie-updates main/d' /etc/apt/sources.list
+      - run: apt-get -o Acquire::Check-Valid-Until=false update -qq && apt-get install -y build-essential nodejs
       - run: apt-get install -y fonts-ipafont-gothic fonts-ipafont-mincho
       - run:
           name: Install phatomjs
@@ -37,19 +40,21 @@ jobs:
       - run:
           name: Install rmagick dependencies
           command: |
-            apt-get install graphicsmagick-libmagick-dev-compat imagemagick libmagickcore-dev libmagickwand-dev
+            apt-get install imagemagick imagemagick-6.q16 libmagickcore-dev libmagickwand-dev
             ln -s /usr/lib/x86_64-linux-gnu/ImageMagick-6.8.9/bin-Q16/Magick-config /usr/bin/Magick-config
-            gem install rmagick -v '2.13.2'
       - restore_cache:
           key: *bundle_cache_key
-      - run: bundle install --jobs=4 --retry=3 --path vendor/bundle
+      - run:
+          name: Install latest version of Bundler
+          command: gem install bundler
+      - run: bundle install
       - save_cache:
           key: *bundle_cache_key
           paths:
             - vendor/bundle
       - run: mkdir -p tmp stat ${CIRCLE_TEST_REPORTS}/rspec/
       - run: mv config/database.yml.sample config/database.yml
-      - run: 
+      - run:
           name: instal dockerize
           command: |
             DOCKERIZE_URL="https://circle-downloads.s3.amazonaws.com/circleci-images/cache/linux-amd64/dockerize-latest.tar.gz" \

@@ -1,8 +1,8 @@
 source 'https://rubygems.org'
 
-ruby '2.5.3'
+ruby '2.3.1'
 
-gem 'rails', '4.2.11'
+gem 'rails', '4.0.13'
 
 gem 'bootstrap-sass', '2.3.2.2'
 gem 'font-awesome-sass-rails', '3.0.2.2'
@@ -51,7 +51,7 @@ gem 'awesome_print'
 gem 'css_splitter'
 gem 'savon'
 gem 'attr_hash_accessor'
-gem 'rmagick', '2.13.2'
+gem 'rmagick'
 gem 'jbuilder', '1.5.1'
 gem 'iconv', '1.0.5'
 gem 'moji'
